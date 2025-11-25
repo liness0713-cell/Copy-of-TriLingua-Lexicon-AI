@@ -1,19 +1,6 @@
-import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { WordData } from "../types";
 
-// Helper to decode base64 audio
-const decodeAudioData = async (
-  base64Data: string,
-  audioContext: AudioContext
-): Promise<AudioBuffer> => {
-  const binaryString = atob(base64Data);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return await audioContext.decodeAudioData(bytes.buffer);
-};
+import { GoogleGenAI, Type, Modality } from "@google/genai";
+import { WordData, SentenceData } from "../types";
 
 export class GeminiService {
   private ai: GoogleGenAI;
@@ -28,8 +15,12 @@ export class GeminiService {
       Input language could be Japanese, English, or Chinese.
       Identify the core vocabulary word intended by the user.
       Provide a trilingual dictionary entry (Japanese, English, Chinese).
-      Include definitions, pronunciations, example sentences (at least one JP and one EN), etymology/composition, synonyms, and antonyms.
-      Ensure the explanations are suitable for a language learner.
+      
+      For the Japanese Definition:
+      1. Provide a standard text version.
+      2. Provide a version with Furigana using HTML <ruby> tags (e.g., <ruby>日本<rt>にほん</rt></ruby>).
+      
+      Include pronunciations, example sentences, etymology, synonyms, and antonyms.
     `;
 
     const response = await this.ai.models.generateContent({
@@ -62,6 +53,7 @@ export class GeminiService {
               type: Type.OBJECT,
               properties: {
                 jp: { type: Type.STRING },
+                jp_furigana: { type: Type.STRING, description: "Japanese definition containing HTML <ruby> tags for Kanji readings" },
                 en: { type: Type.STRING },
                 zh: { type: Type.STRING },
               },
@@ -77,16 +69,17 @@ export class GeminiService {
                 },
               },
             },
-            etymology: { type: Type.STRING, description: "Origin, kanji breakdown, or word formation history" },
+            etymology: { type: Type.STRING },
             related: {
               type: Type.OBJECT,
               properties: {
                 synonyms: { type: Type.ARRAY, items: { type: Type.STRING } },
                 antonyms: { type: Type.ARRAY, items: { type: Type.STRING } },
               },
+              required: ["synonyms", "antonyms"],
             },
           },
-          required: ["coreWord", "pronunciation", "definitions", "examples", "etymology"],
+          required: ["coreWord", "pronunciation", "definitions", "examples", "etymology", "related"],
         },
       },
     });
@@ -95,12 +88,77 @@ export class GeminiService {
     return JSON.parse(response.text) as WordData;
   }
 
+  async analyzeSentence(sentence: string): Promise<SentenceData> {
+    const prompt = `
+      Analyze the following sentence deeply: "${sentence}".
+      The sentence could be in Japanese, English, or Chinese.
+      
+      1. Break down the sentence word by word (or by grammatical unit).
+      2. Provide a detailed grammar analysis explaining the structure, tense, and nuances.
+      3. Provide the grammar analysis in THREE languages: Japanese, English, and Chinese.
+      4. Translate the full sentence into Japanese, English, and Chinese.
+      
+      For ANY Japanese text output (translations, grammar analysis, etc.):
+      Provide a version that uses HTML <ruby> tags for Furigana readings where appropriate (e.g. <ruby>私<rt>わたし</rt></ruby>は...).
+    `;
+
+    const response = await this.ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            original: { type: Type.STRING },
+            breakdown: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  word: { type: Type.STRING },
+                  reading: { type: Type.STRING, description: "Reading if applicable (e.g. Kana for Kanji)" },
+                  partOfSpeech: { type: Type.STRING },
+                  meaning: { type: Type.STRING },
+                }
+              }
+            },
+            grammarAnalysis: {
+              type: Type.OBJECT,
+              description: "Detailed explanation of grammar and structure in three languages",
+              properties: {
+                jp: { type: Type.STRING, description: "Japanese explanation" },
+                en: { type: Type.STRING, description: "English explanation" },
+                zh: { type: Type.STRING, description: "Chinese explanation" }
+              },
+              required: ["jp", "en", "zh"]
+            },
+            translations: {
+              type: Type.OBJECT,
+              properties: {
+                jp: { type: Type.STRING, description: "Plain Japanese translation" },
+                jp_furigana: { type: Type.STRING, description: "Japanese translation with HTML <ruby> tags" },
+                en: { type: Type.STRING },
+                zh: { type: Type.STRING },
+              },
+              required: ["jp", "jp_furigana", "en", "zh"]
+            }
+          },
+          required: ["original", "breakdown", "grammarAnalysis", "translations"]
+        }
+      }
+    });
+
+    if (!response.text) throw new Error("No text response from Gemini");
+    return JSON.parse(response.text) as SentenceData;
+  }
+
   async generateImage(word: string): Promise<string | null> {
     try {
       const response = await this.ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
-          parts: [{ text: `A clear, educational, minimalistic illustration representing the word: "${word}". No text in the image.` }],
+          parts: [{ text: `A clear, high-quality, photorealistic or artistic illustration representing the concept of: "${word}". The image should be wide and suitable for a header.` }],
         },
       });
 
@@ -117,15 +175,15 @@ export class GeminiService {
   }
 
   async generateSpeech(text: string, lang: 'jp' | 'en' | 'zh'): Promise<void> {
-    const voiceName = lang === 'jp' ? 'Kore' : lang === 'en' ? 'Fenrir' : 'Puck'; // Mapping approx voices
+    // Strip HTML tags for speech generation (in case text contains ruby tags)
+    const cleanText = text.replace(/<[^>]*>?/gm, '');
     
-    // Note: Gemini TTS currently supports specific voices. Using default English-like mapping or multi-lang capable if available.
-    // Since 'Kore' etc are preset, we try to match the best available.
+    const voiceName = lang === 'jp' ? 'Kore' : lang === 'en' ? 'Fenrir' : 'Puck';
     
     try {
       const response = await this.ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: text }] }],
+        contents: [{ parts: [{ text: cleanText }] }],
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
@@ -139,11 +197,24 @@ export class GeminiService {
       const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
       if (!base64Audio) return;
 
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const audioBuffer = await decodeAudioData(base64Audio, audioContext);
+      const binaryString = atob(base64Audio);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      const dataInt16 = new Int16Array(bytes.buffer);
+      const buffer = audioContext.createBuffer(1, dataInt16.length, 24000);
+      const channelData = buffer.getChannelData(0);
       
+      for (let i = 0; i < dataInt16.length; i++) {
+        channelData[i] = dataInt16[i] / 32768.0;
+      }
+
       const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
+      source.buffer = buffer;
       source.connect(audioContext.destination);
       source.start();
 

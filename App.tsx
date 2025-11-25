@@ -1,14 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { geminiService } from './services/geminiService';
-import { WordData, HistoryItem, LoadingState } from './types';
+import { WordData, SentenceData, HistoryItem, LoadingState, AppMode } from './types';
 import { WordCard } from './components/WordCard';
+import { SentenceAnalysis } from './components/SentenceAnalysis';
 import { HistorySidebar } from './components/HistorySidebar';
 
 const HISTORY_KEY = 'trilingua_history';
 
 function App() {
+  const [mode, setMode] = useState<AppMode>('dictionary');
   const [query, setQuery] = useState('');
-  const [currentData, setCurrentData] = useState<WordData | null>(null);
+  const [currentWordData, setCurrentWordData] = useState<WordData | null>(null);
+  const [currentSentenceData, setCurrentSentenceData] = useState<SentenceData | null>(null);
   const [currentImage, setCurrentImage] = useState<string | undefined>(undefined);
   const [loadingState, setLoadingState] = useState<LoadingState>(LoadingState.IDLE);
   const [error, setError] = useState<string | null>(null);
@@ -38,80 +41,93 @@ function App() {
 
     setLoadingState(LoadingState.ANALYZING);
     setError(null);
-    setCurrentData(null);
+    setCurrentWordData(null);
+    setCurrentSentenceData(null);
     setCurrentImage(undefined);
 
     try {
-      // 1. Analyze text
-      const data = await geminiService.analyzeWord(query);
-      setCurrentData(data);
-      setLoadingState(LoadingState.GENERATING_IMAGE);
+      if (mode === 'dictionary') {
+        // Dictionary Mode Logic
+        const data = await geminiService.analyzeWord(query);
+        setCurrentWordData(data);
+        setLoadingState(LoadingState.GENERATING_IMAGE);
 
-      // 2. Generate Image
-      const image = await geminiService.generateImage(data.coreWord.en);
-      if (image) setCurrentImage(image);
+        // Generate Image
+        const image = await geminiService.generateImage(data.coreWord.en);
+        if (image) setCurrentImage(image);
 
-      setLoadingState(LoadingState.COMPLETE);
+        setLoadingState(LoadingState.COMPLETE);
 
-      // 3. Add to History
-      const newItem: HistoryItem = {
-        id: Date.now().toString(),
-        timestamp: Date.now(),
-        word: data.coreWord.jp,
-        data: data,
-        imageUrl: image || undefined
-      };
-      
-      setHistory(prev => {
-        // Remove duplicate if exists at top
-        const filtered = prev.filter(item => 
-          item.data.coreWord.jp !== data.coreWord.jp && 
-          item.data.coreWord.en !== data.coreWord.en
-        );
-        return [newItem, ...filtered].slice(0, 50); // Keep last 50
-      });
+        // Add to History
+        const newItem: HistoryItem = {
+          id: Date.now().toString(),
+          timestamp: Date.now(),
+          type: 'word',
+          label: data.coreWord.jp,
+          data: data,
+          imageUrl: image || undefined
+        };
+        updateHistory(newItem);
+
+      } else {
+        // Sentence Mode Logic
+        const data = await geminiService.analyzeSentence(query);
+        setCurrentSentenceData(data);
+        setLoadingState(LoadingState.COMPLETE);
+
+        // Add to History
+        const newItem: HistoryItem = {
+          id: Date.now().toString(),
+          timestamp: Date.now(),
+          type: 'sentence',
+          label: data.original.length > 20 ? data.original.substring(0, 20) + '...' : data.original,
+          data: data
+        };
+        updateHistory(newItem);
+      }
 
     } catch (err) {
       console.error(err);
-      setError("Unable to analyze the word. Please check your API key or try again.");
+      setError("Unable to analyze. Please check your API key or try again.");
       setLoadingState(LoadingState.ERROR);
     }
   };
 
+  const updateHistory = (newItem: HistoryItem) => {
+    setHistory(prev => {
+      // Remove duplicate if exists
+      const filtered = prev.filter(item => item.label !== newItem.label);
+      return [newItem, ...filtered].slice(0, 50);
+    });
+  };
+
   const loadFromHistory = (item: HistoryItem) => {
-    setCurrentData(item.data);
-    setCurrentImage(item.imageUrl);
-    setQuery(item.data.inputWord || item.data.coreWord.jp);
+    if (item.type === 'word') {
+      setMode('dictionary');
+      setCurrentWordData(item.data as WordData);
+      setCurrentImage(item.imageUrl);
+      setQuery((item.data as WordData).inputWord || (item.data as WordData).coreWord.jp);
+    } else {
+      setMode('sentence');
+      setCurrentSentenceData(item.data as SentenceData);
+      setQuery((item.data as SentenceData).original);
+    }
     setLoadingState(LoadingState.COMPLETE);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const exportHistory = () => {
     if (history.length === 0) return;
+    
+    // Simple generic export for now
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + "Timestamp,Type,Label\n"
+      + history.map(h => `${new Date(h.timestamp).toISOString()},${h.type},"${h.label.replace(/"/g, '""')}"`).join("\n");
 
-    const headers = ["Timestamp", "Input", "JP", "EN", "ZH", "JP_Pron", "EN_Pron", "Definition_JP", "Definition_EN"];
-    const rows = history.map(h => [
-      new Date(h.timestamp).toISOString(),
-      h.data.inputWord,
-      h.data.coreWord.jp,
-      h.data.coreWord.en,
-      h.data.coreWord.zh,
-      h.data.pronunciation.jp,
-      h.data.pronunciation.en,
-      `"${h.data.definitions.jp.replace(/"/g, '""')}"`,
-      `"${h.data.definitions.en.replace(/"/g, '""')}"`
-    ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(r => r.join(","))
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `trilingua_export_${new Date().toISOString().slice(0,10)}.csv`);
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "history_export.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -133,37 +149,71 @@ function App() {
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         
         {/* Top Navbar / Search Bar */}
-        <div className="bg-white border-b border-slate-200 p-4 md:p-6 shadow-sm z-30 flex gap-4 items-center">
-          <button 
-            className="lg:hidden text-slate-500 p-2 hover:bg-slate-100 rounded-lg"
-            onClick={() => setIsSidebarOpen(true)}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-          </button>
+        <div className="bg-white border-b border-slate-200 p-4 md:p-6 shadow-sm z-30 flex flex-col gap-4">
+          
+          {/* Mobile Menu & Title */}
+          <div className="flex items-center gap-4 lg:hidden">
+             <button 
+              className="text-slate-500 p-2 hover:bg-slate-100 rounded-lg"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </button>
+            <span className="font-bold text-slate-700">TriLingua</span>
+          </div>
 
-          <form onSubmit={handleSearch} className="flex-1 max-w-3xl mx-auto flex gap-2 relative">
+          {/* Mode Switcher Tabs */}
+          <div className="flex justify-center">
+             <div className="bg-slate-100 p-1 rounded-lg inline-flex">
+                <button 
+                  onClick={() => setMode('dictionary')}
+                  className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${mode === 'dictionary' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Dictionary
+                </button>
+                <button 
+                  onClick={() => setMode('sentence')}
+                  className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${mode === 'sentence' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Sentence Analysis
+                </button>
+             </div>
+          </div>
+
+          {/* Search Form */}
+          <form onSubmit={handleSearch} className="w-full max-w-3xl mx-auto flex gap-2 relative">
             <div className="relative flex-1">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <div className="absolute top-3.5 left-3 flex items-start pointer-events-none text-slate-400">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                 </svg>
               </div>
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Enter Japanese, English, or Chinese..."
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none transition-all shadow-sm"
-              />
+              {mode === 'dictionary' ? (
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Enter a word (Japanese, English, or Chinese)..."
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none transition-all shadow-sm"
+                />
+              ) : (
+                 <textarea
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Enter a long sentence to analyze..."
+                  rows={2}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none transition-all shadow-sm resize-none"
+                />
+              )}
             </div>
             <button
               type="submit"
               disabled={loadingState === LoadingState.ANALYZING || loadingState === LoadingState.GENERATING_IMAGE || !query.trim()}
-              className="px-6 py-3 bg-brand-600 text-white font-semibold rounded-xl hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-colors"
+              className={`px-6 py-3 text-white font-semibold rounded-xl shadow-md transition-colors h-fit ${mode === 'dictionary' ? 'bg-brand-600 hover:bg-brand-500' : 'bg-indigo-600 hover:bg-indigo-500'} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              Search
+              {mode === 'dictionary' ? 'Search' : 'Analyze'}
             </button>
           </form>
         </div>
@@ -171,14 +221,20 @@ function App() {
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative">
           
-          <div className="max-w-4xl mx-auto min-h-full">
+          <div className="max-w-4xl mx-auto min-h-full pb-20">
             
-            {loadingState === LoadingState.IDLE && !currentData && (
+            {loadingState === LoadingState.IDLE && !currentWordData && !currentSentenceData && (
               <div className="flex flex-col items-center justify-center h-full text-slate-400 opacity-60 mt-20">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={0.5} stroke="currentColor" className="w-32 h-32 mb-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                  {mode === 'dictionary' ? (
+                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                  ) : (
+                     <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
+                  )}
                 </svg>
-                <p className="text-xl font-serif">Search for a word to begin learning</p>
+                <p className="text-xl font-serif">
+                  {mode === 'dictionary' ? 'Search for a word' : 'Enter a sentence to analyze'}
+                </p>
               </div>
             )}
 
@@ -188,12 +244,21 @@ function App() {
                 <div className="h-4 bg-slate-200 rounded w-full mb-3"></div>
                 <div className="h-4 bg-slate-200 rounded w-5/6 mb-3"></div>
                 <div className="h-4 bg-slate-200 rounded w-4/6 mb-8"></div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="h-32 bg-slate-200 rounded"></div>
-                  <div className="h-32 bg-slate-200 rounded"></div>
-                </div>
+                {mode === 'dictionary' ? (
+                   <div className="grid grid-cols-2 gap-4">
+                    <div className="h-32 bg-slate-200 rounded"></div>
+                    <div className="h-32 bg-slate-200 rounded"></div>
+                  </div>
+                ) : (
+                   <div className="flex gap-2">
+                     <div className="h-24 w-24 bg-slate-200 rounded"></div>
+                     <div className="h-24 w-24 bg-slate-200 rounded"></div>
+                     <div className="h-24 w-24 bg-slate-200 rounded"></div>
+                   </div>
+                )}
+               
                 <div className="mt-8 text-center text-brand-600 font-medium">
-                  {loadingState === LoadingState.ANALYZING ? "Analyzing language patterns..." : "Painting visualization..."}
+                  {loadingState === LoadingState.ANALYZING ? "Analyzing language patterns..." : "Visualizing context..."}
                 </div>
               </div>
             )}
@@ -204,9 +269,14 @@ function App() {
               </div>
             )}
 
-            {currentData && (
-              <WordCard data={currentData} imageUrl={currentImage} />
+            {mode === 'dictionary' && currentWordData && (
+              <WordCard data={currentWordData} imageUrl={currentImage} />
             )}
+
+            {mode === 'sentence' && currentSentenceData && (
+              <SentenceAnalysis data={currentSentenceData} />
+            )}
+
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { HistoryItem } from '../types';
+import { HistoryItem, WordData, SentenceData } from '../types';
 
 interface HistorySidebarProps {
   history: HistoryItem[];
@@ -63,11 +63,15 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
                 className="w-full text-left p-3 rounded-lg hover:bg-slate-50 hover:border-brand-200 border border-transparent transition-all group"
               >
                 <div className="flex justify-between items-center mb-1">
-                  <span className="font-bold text-slate-700 text-sm">{item.data.coreWord.jp}</span>
+                  <span className="font-bold text-slate-700 text-sm">{item.label}</span>
                   <span className="text-[10px] text-slate-400">{new Date(item.timestamp).toLocaleDateString()}</span>
                 </div>
                 <div className="flex justify-between text-xs text-slate-500">
-                  <span>{item.data.coreWord.en}</span>
+                  <span>
+                    {item.type === 'word' 
+                      ? (item.data as WordData).coreWord.en 
+                      : (item.data as SentenceData).translations.en.slice(0, 30) + '...'}
+                  </span>
                 </div>
               </button>
             ))
