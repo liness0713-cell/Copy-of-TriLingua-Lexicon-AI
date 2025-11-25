@@ -47,9 +47,9 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-2">
           {history.length === 0 ? (
-            <div className="text-center text-slate-400 mt-10 text-sm">
+            <div className="text-center text-slate-400 mt-10 text-sm min-h-[200px] flex flex-col justify-center">
               <p>No history yet.</p>
               <p>Start searching!</p>
             </div>
@@ -61,7 +61,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
                   onSelect(item);
                   if (window.innerWidth < 1024) onClose();
                 }}
-                className="w-full text-left p-3 rounded-lg hover:bg-slate-50 hover:border-brand-200 border border-transparent transition-all group"
+                className="w-full text-left p-3 rounded-lg hover:bg-slate-50 hover:border-brand-200 border border-transparent transition-all group shrink-0"
               >
                 <div className="flex justify-between items-center mb-1">
                   <span className="font-bold text-slate-700 text-sm">{item.label}</span>
@@ -77,13 +77,15 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
               </button>
             ))
           )}
+
+          {/* Ad Space - Increased margins for better separation */}
+          <div className="mt-8 pt-6 border-t border-slate-100 shrink-0">
+             <AdUnit format="rectangle" className="w-full !max-w-full !h-[180px] !my-0" />
+          </div>
         </div>
 
-        {/* Ad Space and Export Button */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50 flex flex-col gap-4">
-          
-          <AdUnit format="rectangle" className="w-full !max-w-full !h-[180px] !my-0" />
-
+        {/* Export Button Fixed Footer */}
+        <div className="p-4 border-t border-slate-200 bg-slate-50">
           <button
             onClick={onExport}
             disabled={history.length === 0}
