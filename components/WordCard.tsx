@@ -80,7 +80,10 @@ export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl, onWordClick 
             <div className="space-y-6">
               {/* Japanese Definitions Block */}
               <div className="space-y-3">
-                 <p className="text-xs text-slate-400 mb-1 ml-1">日本語</p>
+                 <div className="flex items-center gap-2 mb-1 ml-1">
+                    <p className="text-xs text-slate-400">日本語</p>
+                    <AudioButton text={data.definitions.jp} lang="jp" size="sm" />
+                 </div>
                  
                  {/* Plain Text Version */}
                  <div className="group">
@@ -100,11 +103,17 @@ export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl, onWordClick 
               </div>
 
               <div className="group">
-                <p className="text-xs text-slate-400 mb-1 ml-1">English</p>
+                <div className="flex items-center gap-2 mb-1 ml-1">
+                    <p className="text-xs text-slate-400">English</p>
+                    <AudioButton text={data.definitions.en} lang="en" size="sm" />
+                </div>
                 <p className="text-lg text-slate-800 leading-relaxed border-l-2 border-slate-200 pl-4 group-hover:border-brand-300 transition-colors">{data.definitions.en}</p>
               </div>
               <div className="group">
-                <p className="text-xs text-slate-400 mb-1 ml-1">中文</p>
+                <div className="flex items-center gap-2 mb-1 ml-1">
+                    <p className="text-xs text-slate-400">中文</p>
+                    <AudioButton text={data.definitions.zh} lang="zh" size="sm" />
+                </div>
                 <p className="text-lg text-slate-800 leading-relaxed border-l-2 border-slate-200 pl-4 group-hover:border-brand-300 transition-colors">{data.definitions.zh}</p>
               </div>
             </div>
