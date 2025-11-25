@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { SentenceData } from '../types';
 import { AudioButton } from './AudioButton';
@@ -41,11 +40,30 @@ export const SentenceAnalysis: React.FC<SentenceAnalysisProps> = ({ data }) => {
             <div className="overflow-x-auto">
               <div className="flex flex-wrap gap-3">
                 {data.breakdown.map((item, index) => (
-                  <div key={index} className="bg-slate-50 border border-slate-200 rounded-lg p-3 min-w-[120px] flex flex-col items-center text-center hover:border-brand-300 transition-colors">
+                  <div key={index} className="bg-slate-50 border border-slate-200 rounded-lg p-3 min-w-[140px] max-w-[200px] flex flex-col items-center text-center hover:border-brand-300 transition-colors">
                     <span className="text-lg font-bold text-slate-800 mb-1">{item.word}</span>
                     {item.reading && <span className="text-xs text-slate-500 mb-1">{item.reading}</span>}
                     <span className="text-[10px] px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded uppercase font-semibold mb-2">{item.partOfSpeech}</span>
-                    <span className="text-xs text-slate-600 leading-tight">{item.meaning}</span>
+                    
+                    {/* Render meanings based on type (string or object) */}
+                    {typeof item.meaning === 'string' ? (
+                      <span className="text-xs text-slate-600 leading-tight">{item.meaning}</span>
+                    ) : (
+                      <div className="flex flex-col gap-1 text-left w-full mt-2 pt-2 border-t border-slate-200/50">
+                        <div className="grid grid-cols-[20px_1fr] gap-1">
+                          <span className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">JP</span>
+                          <span className="text-xs text-slate-700 leading-tight">{item.meaning.jp}</span>
+                        </div>
+                        <div className="grid grid-cols-[20px_1fr] gap-1">
+                          <span className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">EN</span>
+                          <span className="text-xs text-slate-700 leading-tight">{item.meaning.en}</span>
+                        </div>
+                        <div className="grid grid-cols-[20px_1fr] gap-1">
+                          <span className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">ZH</span>
+                          <span className="text-xs text-slate-700 leading-tight">{item.meaning.zh}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

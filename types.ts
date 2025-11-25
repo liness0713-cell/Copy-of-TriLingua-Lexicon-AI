@@ -1,4 +1,3 @@
-
 export interface ExampleSentence {
   text: string;
   translation: string; // Chinese translation
@@ -35,7 +34,11 @@ export interface WordBreakdown {
   word: string;
   reading?: string;
   partOfSpeech: string;
-  meaning: string;
+  meaning: string | {
+    jp: string;
+    en: string;
+    zh: string;
+  };
 }
 
 export interface SentenceData {

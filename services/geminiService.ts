@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { WordData, SentenceData } from "../types";
 
@@ -114,9 +113,10 @@ export class GeminiService {
       The sentence could be in Japanese, English, or Chinese.
       
       1. Break down the sentence word by word (or by grammatical unit).
-      2. Provide a detailed grammar analysis explaining the structure, tense, and nuances.
-      3. Provide the grammar analysis in THREE languages: Japanese, English, and Chinese.
-      4. Translate the full sentence into Japanese, English, and Chinese.
+      2. For each broken-down word, provide the meaning in Japanese, English, and Chinese.
+      3. Provide a detailed grammar analysis explaining the structure, tense, and nuances.
+      4. Provide the grammar analysis in THREE languages: Japanese, English, and Chinese.
+      5. Translate the full sentence into Japanese, English, and Chinese.
       
       For ANY Japanese text output (translations, grammar analysis, etc.):
       Provide a version that uses HTML <ruby> tags for Furigana readings where appropriate (e.g. <ruby>私<rt>わたし</rt></ruby>は...).
@@ -139,7 +139,16 @@ export class GeminiService {
                   word: { type: Type.STRING },
                   reading: { type: Type.STRING, description: "Reading if applicable (e.g. Kana for Kanji)" },
                   partOfSpeech: { type: Type.STRING },
-                  meaning: { type: Type.STRING },
+                  meaning: { 
+                    type: Type.OBJECT,
+                    description: "Meaning in JP, EN, and ZH",
+                    properties: {
+                      jp: { type: Type.STRING },
+                      en: { type: Type.STRING },
+                      zh: { type: Type.STRING },
+                    },
+                    required: ["jp", "en", "zh"]
+                  },
                 }
               }
             },
