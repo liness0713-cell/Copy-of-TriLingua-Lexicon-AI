@@ -8,6 +8,9 @@ interface WordCardProps {
 }
 
 export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl }) => {
+  const isAiGenerated = imageUrl?.startsWith('data:');
+  const sourceLabel = isAiGenerated ? "AI Visualization" : "Web Image";
+
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
       
@@ -18,10 +21,15 @@ export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl }) => {
              src={imageUrl} 
              alt={data.coreWord.en} 
              className="w-full h-full object-cover"
+             onError={(e) => {
+               // Fallback if the searched image URL is broken
+               (e.target as HTMLImageElement).style.display = 'none';
+               (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+             }}
            />
            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60"></div>
-           <span className="absolute bottom-3 right-3 text-white/90 text-[10px] uppercase tracking-widest bg-black/40 px-2 py-1 rounded backdrop-blur-sm font-bold">
-             AI Visualization
+           <span className={`absolute bottom-3 right-3 text-white/90 text-[10px] uppercase tracking-widest px-2 py-1 rounded backdrop-blur-sm font-bold ${isAiGenerated ? 'bg-indigo-600/80' : 'bg-slate-700/80'}`}>
+             {sourceLabel}
            </span>
         </div>
       )}

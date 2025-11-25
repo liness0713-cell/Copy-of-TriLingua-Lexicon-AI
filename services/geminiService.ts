@@ -184,6 +184,7 @@ export class GeminiService {
 
   async generateImage(word: string): Promise<string | null> {
     try {
+      // 1. Try AI Generation first
       const response = await this.getClient().models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
@@ -196,9 +197,49 @@ export class GeminiService {
           return `data:image/png;base64,${part.inlineData.data}`;
         }
       }
+      // If we got here, no inlineData was found
+      throw new Error("No image data returned from AI model");
+    } catch (e) {
+      console.warn("AI Image generation failed, falling back to search:", e);
+      // 2. Fallback to Search
+      return this.searchImage(word);
+    }
+  }
+
+  private async searchImage(word: string): Promise<string | null> {
+    try {
+      const prompt = `
+        Find a direct image URL representing the word: "${word}".
+        Preferably from Wikimedia Commons or other public domain sources.
+        The URL MUST point directly to an image file (ending in .jpg, .png, .jpeg).
+        Return ONLY the URL string. Do not add any markdown, explanation, or JSON formatting.
+      `;
+
+      const response = await this.getClient().models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+        },
+      });
+
+      const text = response.text?.trim();
+      
+      // Basic validation to extract a URL from the response
+      if (text) {
+        // Find the first http/https link in the text
+        const urlMatch = text.match(/https?:\/\/[^\s)"]+/);
+        if (urlMatch) {
+          let url = urlMatch[0];
+          // Remove trailing punctuation if any (like a period at the end of a sentence)
+          if (url.endsWith('.')) url = url.slice(0, -1);
+          return url;
+        }
+      }
+      
       return null;
     } catch (e) {
-      console.error("Image generation failed", e);
+      console.error("Image search fallback failed", e);
       return null;
     }
   }
