@@ -1,5 +1,6 @@
 import React from 'react';
 import { HistoryItem, WordData, SentenceData } from '../types';
+import { AdUnit } from './AdUnit';
 
 interface HistorySidebarProps {
   history: HistoryItem[];
@@ -78,7 +79,11 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
           )}
         </div>
 
-        <div className="p-4 border-t border-slate-200 bg-slate-50">
+        {/* Ad Space and Export Button */}
+        <div className="p-4 border-t border-slate-200 bg-slate-50 flex flex-col gap-4">
+          
+          <AdUnit format="rectangle" className="w-full !max-w-full !h-[180px] !my-0" />
+
           <button
             onClick={onExport}
             disabled={history.length === 0}

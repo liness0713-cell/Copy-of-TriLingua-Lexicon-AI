@@ -4,6 +4,7 @@ import { WordData, SentenceData, HistoryItem, LoadingState, AppMode } from './ty
 import { WordCard } from './components/WordCard';
 import { SentenceAnalysis } from './components/SentenceAnalysis';
 import { HistorySidebar } from './components/HistorySidebar';
+import { AdUnit } from './components/AdUnit';
 
 const HISTORY_KEY = 'trilingua_history';
 
@@ -223,8 +224,11 @@ function App() {
           
           <div className="max-w-4xl mx-auto min-h-full pb-20">
             
+            {/* Top Ad Unit - Prime real estate above content */}
+            <AdUnit format="horizontal" />
+
             {loadingState === LoadingState.IDLE && !currentWordData && !currentSentenceData && (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400 opacity-60 mt-20">
+              <div className="flex flex-col items-center justify-center h-64 text-slate-400 opacity-60">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={0.5} stroke="currentColor" className="w-32 h-32 mb-4">
                   {mode === 'dictionary' ? (
                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
@@ -276,6 +280,9 @@ function App() {
             {mode === 'sentence' && currentSentenceData && (
               <SentenceAnalysis data={currentSentenceData} />
             )}
+
+            {/* Bottom Ad Unit - Shown after content or on initial load */}
+            <AdUnit format="horizontal" className="mt-8" />
 
           </div>
         </div>
