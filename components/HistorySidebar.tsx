@@ -79,7 +79,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
           )}
 
           {/* Ad Space - Increased margins for better separation */}
-          <div className="mt-8 pt-6 border-t border-slate-100 shrink-0">
+          <div className="mt-8 pt-6 border-t border-slate-100 shrink-0 mb-6">
              <AdUnit format="rectangle" className="w-full !max-w-full !h-[180px] !my-0" />
           </div>
         </div>
