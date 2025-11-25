@@ -3,10 +3,30 @@ import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { WordData, SentenceData } from "../types";
 
 export class GeminiService {
-  private ai: GoogleGenAI;
+  private ai: GoogleGenAI | null = null;
 
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Attempt to initialize if key is present, but don't crash if not.
+    // Initialization is deferred to actual usage to prevent load-time errors.
+    const apiKey = process.env.API_KEY;
+    if (apiKey) {
+      try {
+        this.ai = new GoogleGenAI({ apiKey });
+      } catch (e) {
+        console.error("Failed to initialize Gemini client:", e);
+      }
+    }
+  }
+
+  private getClient(): GoogleGenAI {
+    if (!this.ai) {
+      const apiKey = process.env.API_KEY;
+      if (!apiKey) {
+        throw new Error("API Key is missing. Please set the API_KEY environment variable in your Vercel settings or .env file.");
+      }
+      this.ai = new GoogleGenAI({ apiKey });
+    }
+    return this.ai;
   }
 
   async analyzeWord(query: string): Promise<WordData> {
@@ -23,7 +43,7 @@ export class GeminiService {
       Include pronunciations, example sentences, etymology, synonyms, and antonyms.
     `;
 
-    const response = await this.ai.models.generateContent({
+    const response = await this.getClient().models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
@@ -102,7 +122,7 @@ export class GeminiService {
       Provide a version that uses HTML <ruby> tags for Furigana readings where appropriate (e.g. <ruby>私<rt>わたし</rt></ruby>は...).
     `;
 
-    const response = await this.ai.models.generateContent({
+    const response = await this.getClient().models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
@@ -155,7 +175,7 @@ export class GeminiService {
 
   async generateImage(word: string): Promise<string | null> {
     try {
-      const response = await this.ai.models.generateContent({
+      const response = await this.getClient().models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
           parts: [{ text: `A clear, high-quality, photorealistic or artistic illustration representing the concept of: "${word}". The image should be wide and suitable for a header.` }],
@@ -181,7 +201,7 @@ export class GeminiService {
     const voiceName = lang === 'jp' ? 'Kore' : lang === 'en' ? 'Fenrir' : 'Puck';
     
     try {
-      const response = await this.ai.models.generateContent({
+      const response = await this.getClient().models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
         contents: [{ parts: [{ text: cleanText }] }],
         config: {
@@ -220,6 +240,7 @@ export class GeminiService {
 
     } catch (e) {
       console.error("TTS failed", e);
+      // Optional: You could throw here if you want the UI to show a "Speech failed" error
     }
   }
 }
