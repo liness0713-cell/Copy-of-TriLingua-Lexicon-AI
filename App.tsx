@@ -36,9 +36,11 @@ function App() {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   }, [history]);
 
-  const handleSearch = async (e?: React.FormEvent) => {
+  const handleSearch = async (e?: React.FormEvent, overrideQuery?: string) => {
     if (e) e.preventDefault();
-    if (!query.trim()) return;
+    const searchTerm = overrideQuery || query;
+
+    if (!searchTerm.trim()) return;
 
     setLoadingState(LoadingState.ANALYZING);
     setError(null);
@@ -49,7 +51,7 @@ function App() {
     try {
       if (mode === 'dictionary') {
         // Dictionary Mode Logic
-        const data = await geminiService.analyzeWord(query);
+        const data = await geminiService.analyzeWord(searchTerm);
         setCurrentWordData(data);
         setLoadingState(LoadingState.GENERATING_IMAGE);
 
@@ -72,7 +74,7 @@ function App() {
 
       } else {
         // Sentence Mode Logic
-        const data = await geminiService.analyzeSentence(query);
+        const data = await geminiService.analyzeSentence(searchTerm);
         setCurrentSentenceData(data);
         setLoadingState(LoadingState.COMPLETE);
 
@@ -114,6 +116,15 @@ function App() {
       setQuery((item.data as SentenceData).original);
     }
     setLoadingState(LoadingState.COMPLETE);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleWordClick = (word: string) => {
+    setQuery(word);
+    setMode('dictionary');
+    // We pass the word explicitly to handleSearch to ensure it uses the clicked word
+    // rather than waiting for the state update cycle
+    handleSearch(undefined, word);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -184,7 +195,7 @@ function App() {
           </div>
 
           {/* Search Form */}
-          <form onSubmit={handleSearch} className="w-full max-w-3xl mx-auto flex gap-2 relative">
+          <form onSubmit={(e) => handleSearch(e)} className="w-full max-w-3xl mx-auto flex gap-2 relative">
             <div className="relative flex-1">
               <div className="absolute top-3.5 left-3 flex items-start pointer-events-none text-slate-400">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -274,7 +285,11 @@ function App() {
             )}
 
             {mode === 'dictionary' && currentWordData && (
-              <WordCard data={currentWordData} imageUrl={currentImage} />
+              <WordCard 
+                data={currentWordData} 
+                imageUrl={currentImage} 
+                onWordClick={handleWordClick}
+              />
             )}
 
             {mode === 'sentence' && currentSentenceData && (

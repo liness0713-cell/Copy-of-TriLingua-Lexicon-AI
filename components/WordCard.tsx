@@ -5,9 +5,10 @@ import { AudioButton } from './AudioButton';
 interface WordCardProps {
   data: WordData;
   imageUrl?: string;
+  onWordClick: (word: string) => void;
 }
 
-export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl }) => {
+export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl, onWordClick }) => {
   const isAiGenerated = imageUrl?.startsWith('data:');
   const sourceLabel = isAiGenerated ? "AI Visualization" : "Web Image";
 
@@ -127,7 +128,14 @@ export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl }) => {
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {data.related?.synonyms?.map((s, i) => (
-                      <span key={i} className="px-2.5 py-1 bg-green-50 text-green-700 text-xs rounded-md border border-green-100 font-medium">{s}</span>
+                      <button 
+                        key={i} 
+                        onClick={() => onWordClick(s)}
+                        className="px-2.5 py-1 bg-green-50 text-green-700 text-xs rounded-md border border-green-100 font-medium hover:bg-green-100 hover:border-green-300 transition-all cursor-pointer"
+                        title={`Search for "${s}"`}
+                      >
+                        {s}
+                      </button>
                     )) || <span className="text-xs text-slate-400">None</span>}
                   </div>
                </div>
@@ -135,7 +143,14 @@ export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl }) => {
                   <h4 className="text-xs text-red-600 font-bold uppercase mb-2">Antonyms</h4>
                   <div className="flex flex-wrap gap-2">
                     {data.related?.antonyms?.map((s, i) => (
-                      <span key={i} className="px-2.5 py-1 bg-red-50 text-red-700 text-xs rounded-md border border-red-100 font-medium">{s}</span>
+                      <button 
+                        key={i} 
+                        onClick={() => onWordClick(s)}
+                        className="px-2.5 py-1 bg-red-50 text-red-700 text-xs rounded-md border border-red-100 font-medium hover:bg-red-100 hover:border-red-300 transition-all cursor-pointer"
+                        title={`Search for "${s}"`}
+                      >
+                        {s}
+                      </button>
                     )) || <span className="text-xs text-slate-400">None</span>}
                   </div>
                </div>
