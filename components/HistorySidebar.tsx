@@ -96,6 +96,17 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
             </svg>
             Export CSV
           </button>
+          
+          <div className="mt-4 text-center">
+            <a 
+              href="https://my-portfolio-beige-five-56.vercel.app/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-xs text-slate-400 hover:text-brand-600 transition-colors font-medium inline-block"
+            >
+              千葉２狗 🐶
+            </a>
+          </div>
         </div>
       </div>
     </>
