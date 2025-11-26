@@ -122,18 +122,48 @@ function App() {
     });
   };
 
-  const loadFromHistory = (item: HistoryItem) => {
+  const loadFromHistory = async (item: HistoryItem) => {
+    setLoadingState(LoadingState.COMPLETE);
+    setError(null);
+    
     if (item.type === 'word') {
       setMode('dictionary');
       setCurrentWordData(item.data as WordData);
-      setCurrentImage(item.imageUrl);
       setQuery((item.data as WordData).inputWord || (item.data as WordData).coreWord.jp);
+      
+      // Image Handling Strategy:
+      // 1. If we have the image in RAM (item.imageUrl), show it instantly.
+      // 2. If we don't (because it was loaded from localStorage without images), regenerate it quietly.
+      if (item.imageUrl) {
+        setCurrentImage(item.imageUrl);
+      } else {
+        setCurrentImage(undefined); // Clear old image
+        // Regenerate in background
+        try {
+            // Optional: Show a "Regenerating image..." loading state here if desired
+            // For now, we just let the text show and image pop in when ready
+            const wordForImage = (item.data as WordData).coreWord.en;
+            // Note: We don't set global loading state to avoid blocking the text reading
+            const newImageUrl = await geminiService.generateImage(wordForImage);
+            
+            if (newImageUrl) {
+                setCurrentImage(newImageUrl);
+                // Update history in RAM so it's cached for this session
+                setHistory(prev => prev.map(h => 
+                    h.id === item.id ? { ...h, imageUrl: newImageUrl } : h
+                ));
+            }
+        } catch (e) {
+            console.error("Background image regeneration failed", e);
+        }
+      }
+
     } else {
       setMode('sentence');
       setCurrentSentenceData(item.data as SentenceData);
       setQuery((item.data as SentenceData).original);
     }
-    setLoadingState(LoadingState.COMPLETE);
+    
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
