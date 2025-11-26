@@ -256,7 +256,7 @@ function App() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Enter a word (Japanese, English, or Chinese)..."
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none transition-all shadow-sm"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none transition-all shadow-sm bg-white"
                 />
               ) : (
                  <textarea
@@ -264,7 +264,7 @@ function App() {
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Enter a long sentence to analyze..."
                   rows={2}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none transition-all shadow-sm resize-none"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none transition-all shadow-sm resize-none bg-white"
                 />
               )}
             </div>
