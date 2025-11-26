@@ -17,7 +17,7 @@ export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl, onWordClick 
       
       {/* Top Image Section (Full Width) */}
       {imageUrl && (
-        <div className="w-full h-64 md:h-80 bg-slate-100 relative group">
+        <div className="w-full h-72 md:h-[480px] bg-slate-100 relative group transition-all duration-300">
            <img 
              src={imageUrl} 
              alt={data.coreWord.en} 

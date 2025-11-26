@@ -190,6 +190,11 @@ export class GeminiService {
         contents: {
           parts: [{ text: `A clear, high-quality, photorealistic or artistic illustration representing the concept of: "${word}". The image should be wide and suitable for a header.` }],
         },
+        config: {
+          imageConfig: {
+            aspectRatio: "16:9"
+          }
+        }
       });
 
       for (const part of response.candidates?.[0]?.content?.parts || []) {
