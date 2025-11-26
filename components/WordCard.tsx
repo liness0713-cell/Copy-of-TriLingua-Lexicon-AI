@@ -134,7 +134,7 @@ export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl, onWordClick 
                    <div key={idx}>
                       <h4 className="text-[10px] uppercase font-bold text-slate-400 mb-2">{group.partOfSpeech}</h4>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {group.forms.map((form, fIdx) => (
+                        {group.forms?.map((form, fIdx) => (
                           <div key={fIdx} className="bg-white p-2 rounded border border-slate-200 shadow-sm flex flex-col">
                             <span className="text-[10px] text-slate-400 mb-0.5">{form.label}</span>
                             <span className="text-sm font-medium text-slate-700">{form.value}</span>
