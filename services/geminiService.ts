@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { WordData, SentenceData } from "../types";
 
@@ -38,6 +39,9 @@ export class GeminiService {
       For the Japanese Definition:
       1. Provide a standard text version.
       2. Provide a version with Furigana using HTML <ruby> tags (e.g., <ruby>日本<rt>にほん</rt></ruby>).
+      
+      For Example Sentences:
+      1. If the example is in Japanese, provide a standard 'text' version AND a 'text_furigana' version with HTML <ruby> tags.
       
       Include pronunciations, example sentences, etymology, synonyms, and antonyms.
     `;
@@ -83,9 +87,11 @@ export class GeminiService {
                 type: Type.OBJECT,
                 properties: {
                   text: { type: Type.STRING },
+                  text_furigana: { type: Type.STRING, description: "Japanese sentence with HTML <ruby> tags. Optional, only for JP examples." },
                   translation: { type: Type.STRING, description: "Chinese translation" },
                   lang: { type: Type.STRING, enum: ["jp", "en"] },
                 },
+                required: ["text", "translation", "lang"]
               },
             },
             etymology: { type: Type.STRING },
@@ -183,8 +189,8 @@ export class GeminiService {
   }
 
   async generateImage(word: string): Promise<string | null> {
+    // 1. Try gemini-2.5-flash-image
     try {
-      // 1. Try AI Generation first
       const response = await this.getClient().models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
@@ -202,14 +208,38 @@ export class GeminiService {
           return `data:image/png;base64,${part.inlineData.data}`;
         }
       }
-      // If we got here, no inlineData was found
-      throw new Error("No image data returned from AI model");
+      // If we got a response but no image, it might be a safety filter or text response.
+      // We don't throw immediately, we just log and fall through to fallback.
+      console.warn("gemini-2.5-flash-image returned no inlineData");
     } catch (e) {
-      console.error("AI Image generation failed (likely rate limit or model error):", e);
-      // 2. Fallback to Search
-      //return this.searchImage(word);
-      return null;
+      console.warn("gemini-2.5-flash-image failed, trying fallback:", e);
     }
+
+    // 2. Fallback to Imagen 3 (often more reliable for pure image gen)
+    try {
+      const response = await this.getClient().models.generateImages({
+        model: 'imagen-3.0-generate-001',
+        prompt: `A clear, high-quality, photorealistic or artistic illustration representing the concept of: "${word}".`,
+        config: {
+          numberOfImages: 1,
+          outputMimeType: 'image/jpeg',
+          aspectRatio: '16:9',
+        },
+      });
+
+      const base64Image = response.generatedImages?.[0]?.image?.imageBytes;
+      if (base64Image) {
+          return `data:image/jpeg;base64,${base64Image}`;
+      }
+      console.warn("imagen-3.0-generate-001 returned no imageBytes");
+    } catch (e) {
+      console.warn("Imagen generation failed, trying search:", e);
+    }
+
+    // 3. Fallback to Search
+    // We return whatever searchImage returns (string or null).
+    // If search also fails, it returns null, which App.tsx handles gracefully.
+    return this.searchImage(word);
   }
 
   private async searchImage(word: string): Promise<string | null> {

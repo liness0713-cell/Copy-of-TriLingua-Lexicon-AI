@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { WordData } from '../types';
 import { AudioButton } from './AudioButton';
@@ -183,9 +184,32 @@ export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl, onWordClick 
                   </span>
                   <AudioButton text={ex.text} lang={ex.lang} size="sm" />
                 </div>
-                <p className={`text-lg mb-3 text-slate-800 ${ex.lang === 'jp' ? 'font-serif' : 'font-sans'}`}>
-                  {ex.text}
-                </p>
+                
+                {ex.lang === 'jp' ? (
+                  <div className="space-y-3 mb-3">
+                    {/* Standard Version */}
+                    <div className="group">
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Standard</p>
+                        <p className="text-lg text-slate-800 font-serif leading-relaxed">
+                          {ex.text}
+                        </p>
+                    </div>
+                    {/* Furigana Version if available */}
+                    {ex.text_furigana && (
+                      <div className="group border-t border-slate-50 pt-2">
+                         <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">With Readings</p>
+                         <p className="text-lg text-slate-800 font-serif leading-relaxed">
+                             <span dangerouslySetInnerHTML={{ __html: ex.text_furigana }} className="ruby-text" />
+                         </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-lg mb-3 text-slate-800 font-sans">
+                    {ex.text}
+                  </p>
+                )}
+                
                 <p className="text-slate-500 text-sm border-t border-slate-50 pt-3 mt-2">
                   {ex.translation}
                 </p>

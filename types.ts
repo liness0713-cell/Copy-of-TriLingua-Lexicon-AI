@@ -1,5 +1,7 @@
+
 export interface ExampleSentence {
   text: string;
+  text_furigana?: string; // Japanese sentence with Ruby tags
   translation: string; // Chinese translation
   lang: 'jp' | 'en';
 }
