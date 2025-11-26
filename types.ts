@@ -6,6 +6,16 @@ export interface ExampleSentence {
   lang: 'jp' | 'en';
 }
 
+export interface InflectionForm {
+  label: string; // e.g. "Past", "Te-form", "Polite (Masu)"
+  value: string; // e.g. "tabeta", "tabete", "tabemasu"
+}
+
+export interface InflectionGroup {
+  partOfSpeech: string; // e.g. "Verb (Ichidan)", "Adjective"
+  forms: InflectionForm[];
+}
+
 export interface WordData {
   inputWord: string;
   coreWord: {
@@ -25,6 +35,7 @@ export interface WordData {
     zh: string;
   };
   examples: ExampleSentence[];
+  inflections?: InflectionGroup[]; // New: List of conjugations/variations
   etymology: string; // Origin and composition
   related: {
     synonyms: string[];

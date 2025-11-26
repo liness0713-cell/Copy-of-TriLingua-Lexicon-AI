@@ -120,6 +120,33 @@ export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl, onWordClick 
             </div>
           </section>
 
+          {/* Inflections / Conjugations Section */}
+          {data.inflections && data.inflections.length > 0 && (
+            <section className="bg-slate-50/50 p-6 rounded-xl border border-slate-100">
+               <h3 className="text-xs uppercase tracking-wider text-slate-600 font-bold mb-4 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-brand-500">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                  Inflections & Conjugations / 活用
+               </h3>
+               <div className="space-y-6">
+                 {data.inflections.map((group, idx) => (
+                   <div key={idx}>
+                      <h4 className="text-[10px] uppercase font-bold text-slate-400 mb-2">{group.partOfSpeech}</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {group.forms.map((form, fIdx) => (
+                          <div key={fIdx} className="bg-white p-2 rounded border border-slate-200 shadow-sm flex flex-col">
+                            <span className="text-[10px] text-slate-400 mb-0.5">{form.label}</span>
+                            <span className="text-sm font-medium text-slate-700">{form.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                   </div>
+                 ))}
+               </div>
+            </section>
+          )}
+
           <section className="bg-slate-50 p-6 rounded-xl border border-slate-100">
              <h3 className="text-xs uppercase tracking-wider text-slate-500 font-bold mb-3 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">

@@ -42,8 +42,14 @@ export class GeminiService {
       
       For Example Sentences:
       1. If the example is in Japanese, provide a standard 'text' version AND a 'text_furigana' version with HTML <ruby> tags.
+
+      For Inflections/Conjugations:
+      1. If the word is a Japanese Verb or Adjective, list common forms (Polite/Masu, Te-form, Past, Negative, Potential, Passive, Causative, Volitional, etc.).
+      2. If the word is an English Verb, list forms (Present, Past, Past Participle, Gerund/Present Participle, 3rd Person Singular).
+      3. If the word is an English Noun with irregular plural, list it.
+      4. If Chinese, leave empty unless there are specific variants.
       
-      Include pronunciations, example sentences, etymology, synonyms, and antonyms.
+      Include pronunciations, example sentences, inflections, etymology, synonyms, and antonyms.
     `;
 
     const response = await this.getClient().models.generateContent({
@@ -93,6 +99,26 @@ export class GeminiService {
                 },
                 required: ["text", "translation", "lang"]
               },
+            },
+            inflections: {
+              type: Type.ARRAY,
+              description: "List of conjugations or inflections (especially for JP/EN verbs/adjectives)",
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  partOfSpeech: { type: Type.STRING, description: "e.g., 'Verb (Godan)', 'Adjective (I-adj)', 'Noun'" },
+                  forms: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        label: { type: Type.STRING, description: "e.g., 'Te-form', 'Past Tense'" },
+                        value: { type: Type.STRING, description: "The conjugated word" }
+                      }
+                    }
+                  }
+                }
+              }
             },
             etymology: { type: Type.STRING },
             related: {
