@@ -200,7 +200,7 @@ export class GeminiService {
       // If we got here, no inlineData was found
       throw new Error("No image data returned from AI model");
     } catch (e) {
-      //console.warn("AI Image generation failed, falling back to search:", e);
+      console.error("AI Image generation failed (likely rate limit or model error):", e);
       // 2. Fallback to Search
       //return this.searchImage(word);
       return null;

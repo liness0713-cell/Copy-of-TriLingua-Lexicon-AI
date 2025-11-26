@@ -33,7 +33,25 @@ function App() {
 
   // Save history on change
   useEffect(() => {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    try {
+      // Create a lightweight version of history for storage
+      // We remove base64 images to prevent QuotaExceededError
+      const storageHistory = history.map(item => {
+        // If imageUrl is a base64 string (starts with data:), remove it
+        if (item.imageUrl && item.imageUrl.startsWith('data:')) {
+          return {
+            ...item,
+            imageUrl: undefined 
+          };
+        }
+        return item;
+      });
+      
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(storageHistory));
+    } catch (e) {
+      // Catch QuotaExceededError and other storage errors to prevent app crash
+      console.warn("Failed to save history to localStorage (likely quota exceeded):", e);
+    }
   }, [history]);
 
   const handleSearch = async (e?: React.FormEvent, overrideQuery?: string) => {
