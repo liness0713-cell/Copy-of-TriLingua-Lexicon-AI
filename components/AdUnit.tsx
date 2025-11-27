@@ -84,13 +84,13 @@ export const AdUnit: React.FC<AdUnitProps> = ({ format = 'horizontal', className
     <div className={`flex justify-center items-center my-4 mx-auto ${className}`}>
       {/* 
         Container for the Ad 
-        This box displays the decorative image.
+        Added "photo frame" styling: white border + shadow + rounded
       */}
       <div className={`
         ${sizeClasses[format]} 
-        bg-slate-100 border border-slate-200 rounded-lg 
+        bg-white border-4 border-white shadow-md rounded-xl ring-1 ring-slate-200
         flex flex-col items-center justify-center text-slate-400
-        transition-colors relative overflow-hidden group shadow-sm
+        relative overflow-hidden group transition-all duration-300
       `}>
         {bgImage && !imageError ? (
           <img 
@@ -102,17 +102,25 @@ export const AdUnit: React.FC<AdUnitProps> = ({ format = 'horizontal', className
         ) : (
           // Fallback pattern if image fails to load
           <div 
-            className="absolute inset-0 opacity-10" 
+            className="absolute inset-0 flex items-center justify-center" 
             style={{ 
-              backgroundImage: 'radial-gradient(#94a3b8 1px, transparent 1px)', 
-              backgroundSize: '16px 16px' 
+              backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', 
+              backgroundSize: '16px 16px',
+              backgroundColor: '#f1f5f9'
             }}
-          ></div>
+          >
+             <div className="flex flex-col items-center gap-2 opacity-50">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-slate-400">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                </svg>
+                <span className="text-[10px] font-bold uppercase tracking-widest">TriLingua</span>
+             </div>
+          </div>
         )}
         
         {/* Small "AD" label kept minimal to not obscure the image */}
         <div className="absolute bottom-1 right-1 z-10 opacity-60 group-hover:opacity-100 transition-opacity">
-          <span className="text-[8px] font-bold uppercase tracking-widest text-slate-500 bg-white/90 px-1.5 py-0.5 rounded shadow-sm">Ad</span>
+          <span className="text-[8px] font-bold uppercase tracking-widest text-slate-500 bg-white/90 px-1.5 py-0.5 rounded shadow-sm border border-slate-100">Ad</span>
         </div>
       </div>
     </div>
