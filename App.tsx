@@ -19,8 +19,26 @@ function App() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Load history on mount
+  const updateUrl = (term: string, currentMode: AppMode) => {
+    try {
+      const url = new URL(window.location.href);
+      if (term) {
+        url.searchParams.set('q', term);
+      } else {
+        url.searchParams.delete('q');
+      }
+      url.searchParams.set('mode', currentMode);
+      window.history.pushState({}, '', url);
+    } catch (e) {
+      // In some preview environments (like Project IDX or CodeSandbox using blob URLs),
+      // pushState might fail. We catch this to prevent the app from crashing.
+      console.warn("Could not update URL:", e);
+    }
+  };
+
+  // Initialize from URL and LocalStorage
   useEffect(() => {
+    // 1. Load History
     const saved = localStorage.getItem(HISTORY_KEY);
     if (saved) {
       try {
@@ -28,6 +46,22 @@ function App() {
       } catch (e) {
         console.error("Failed to parse history", e);
       }
+    }
+
+    // 2. Check URL Params
+    const params = new URLSearchParams(window.location.search);
+    const urlQuery = params.get('q');
+    const urlMode = params.get('mode');
+
+    if (urlQuery) {
+      // If valid mode in URL, use it, otherwise default to dictionary
+      const targetMode: AppMode = (urlMode === 'sentence') ? 'sentence' : 'dictionary';
+      
+      setMode(targetMode);
+      setQuery(urlQuery);
+      
+      // Trigger search immediately with the URL parameters
+      handleSearch(undefined, urlQuery, targetMode);
     }
   }, []);
 
@@ -54,20 +88,30 @@ function App() {
     }
   }, [history]);
 
-  const handleSearch = async (e?: React.FormEvent, overrideQuery?: string) => {
+  const handleSearch = async (e?: React.FormEvent, overrideQuery?: string, overrideMode?: AppMode) => {
     if (e) e.preventDefault();
     const searchTerm = overrideQuery || query;
+    const activeMode = overrideMode || mode;
 
     if (!searchTerm.trim()) return;
 
+    // Update URL
+    updateUrl(searchTerm, activeMode);
+
     setLoadingState(LoadingState.ANALYZING);
     setError(null);
-    setCurrentWordData(null);
-    setCurrentSentenceData(null);
-    setCurrentImage(undefined);
+    
+    // Clear data for the ACTIVE mode to show loading state correctly
+    // We keep the OTHER mode's data in state (optimized for switching back)
+    if (activeMode === 'dictionary') {
+        setCurrentWordData(null);
+        setCurrentImage(undefined);
+    } else {
+        setCurrentSentenceData(null);
+    }
 
     try {
-      if (mode === 'dictionary') {
+      if (activeMode === 'dictionary') {
         // Dictionary Mode Logic
         const data = await geminiService.analyzeWord(searchTerm);
         setCurrentWordData(data);
@@ -126,32 +170,30 @@ function App() {
     setLoadingState(LoadingState.COMPLETE);
     setError(null);
     
+    // Determine mode based on item type
+    const newMode = item.type === 'word' ? 'dictionary' : 'sentence';
+    setMode(newMode);
+    
     if (item.type === 'word') {
-      setMode('dictionary');
-      setCurrentWordData(item.data as WordData);
-      setQuery((item.data as WordData).inputWord || (item.data as WordData).coreWord.jp);
+      const wData = item.data as WordData;
+      const queryText = wData.inputWord || wData.coreWord.jp;
       
-      // Image Handling Strategy:
-      // 1. If we have the image in RAM (item.imageUrl), show it instantly.
-      // 2. If we don't (because it was loaded from localStorage without images), regenerate it quietly.
+      setCurrentWordData(wData);
+      setQuery(queryText);
+      updateUrl(queryText, 'dictionary');
+      
+      // Image Handling
       if (item.imageUrl) {
         setCurrentImage(item.imageUrl);
       } else {
-        setCurrentImage(undefined); // Clear old image
-        // Regenerate in background
+        setCurrentImage(undefined);
+        // Regenerate background
         try {
-            // Optional: Show a "Regenerating image..." loading state here if desired
-            // For now, we just let the text show and image pop in when ready
-            const wordForImage = (item.data as WordData).coreWord.en;
-            // Note: We don't set global loading state to avoid blocking the text reading
+            const wordForImage = wData.coreWord.en;
             const newImageUrl = await geminiService.generateImage(wordForImage);
-            
             if (newImageUrl) {
                 setCurrentImage(newImageUrl);
-                // Update history in RAM so it's cached for this session
-                setHistory(prev => prev.map(h => 
-                    h.id === item.id ? { ...h, imageUrl: newImageUrl } : h
-                ));
+                setHistory(prev => prev.map(h => h.id === item.id ? { ...h, imageUrl: newImageUrl } : h));
             }
         } catch (e) {
             console.error("Background image regeneration failed", e);
@@ -159,9 +201,10 @@ function App() {
       }
 
     } else {
-      setMode('sentence');
-      setCurrentSentenceData(item.data as SentenceData);
-      setQuery((item.data as SentenceData).original);
+      const sData = item.data as SentenceData;
+      setCurrentSentenceData(sData);
+      setQuery(sData.original);
+      updateUrl(sData.original, 'sentence');
     }
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -171,15 +214,44 @@ function App() {
     setQuery(word);
     setMode('dictionary');
     // We pass the word explicitly to handleSearch to ensure it uses the clicked word
-    // rather than waiting for the state update cycle
-    handleSearch(undefined, word);
+    handleSearch(undefined, word, 'dictionary');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleModeSwitch = (newMode: AppMode) => {
+    setMode(newMode);
+    setError(null);
+    setLoadingState(LoadingState.IDLE);
+    
+    // OPTIMIZATION: Restore query text and URL for the selected mode
+    // We DO NOT clear the data of the new mode. If it was previously searched, we show it.
+    if (newMode === 'dictionary') {
+      if (currentWordData) {
+        // If we have previous dictionary data, restore the query and URL
+        const word = currentWordData.inputWord || currentWordData.coreWord.jp;
+        setQuery(word);
+        updateUrl(word, 'dictionary');
+      } else {
+        // Empty state for dictionary
+        setQuery('');
+        updateUrl('', 'dictionary');
+      }
+    } else {
+      if (currentSentenceData) {
+        // If we have previous sentence data, restore the query and URL
+        setQuery(currentSentenceData.original);
+        updateUrl(currentSentenceData.original, 'sentence');
+      } else {
+        // Empty state for sentence
+        setQuery('');
+        updateUrl('', 'sentence');
+      }
+    }
   };
 
   const exportHistory = () => {
     if (history.length === 0) return;
     
-    // Simple generic export for now
     const csvContent = "data:text/csv;charset=utf-8," 
       + "Timestamp,Type,Label\n"
       + history.map(h => `${new Date(h.timestamp).toISOString()},${h.type},"${h.label.replace(/"/g, '""')}"`).join("\n");
@@ -192,6 +264,12 @@ function App() {
     link.click();
     document.body.removeChild(link);
   };
+
+  // Logic for showing the empty state placeholder
+  const showPlaceholder = loadingState === LoadingState.IDLE && (
+    (mode === 'dictionary' && !currentWordData) ||
+    (mode === 'sentence' && !currentSentenceData)
+  );
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100 font-sans text-slate-800">
@@ -228,13 +306,13 @@ function App() {
           <div className="flex justify-center">
              <div className="bg-slate-100 p-1 rounded-lg inline-flex">
                 <button 
-                  onClick={() => setMode('dictionary')}
+                  onClick={() => handleModeSwitch('dictionary')}
                   className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${mode === 'dictionary' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   Dictionary
                 </button>
                 <button 
-                  onClick={() => setMode('sentence')}
+                  onClick={() => handleModeSwitch('sentence')}
                   className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${mode === 'sentence' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   Sentence Analysis
@@ -286,7 +364,8 @@ function App() {
             {/* Top Ad Unit - Prime real estate above content */}
             <AdUnit format="horizontal" />
 
-            {loadingState === LoadingState.IDLE && !currentWordData && !currentSentenceData && (
+            {/* Empty State Placeholder */}
+            {showPlaceholder && (
               <div className="flex flex-col items-center justify-center h-64 text-slate-400 opacity-60">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={0.5} stroke="currentColor" className="w-32 h-32 mb-4">
                   {mode === 'dictionary' ? (
