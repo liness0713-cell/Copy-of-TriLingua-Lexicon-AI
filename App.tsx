@@ -272,6 +272,10 @@ function App() {
     document.body.removeChild(link);
   };
 
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.target.select();
+  };
+
   // Logic for showing the empty state placeholder
   const showPlaceholder = loadingState === LoadingState.IDLE && (
     (mode === 'dictionary' && !currentWordData) ||
@@ -340,6 +344,7 @@ function App() {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  onFocus={handleInputFocus}
                   placeholder="Enter a word (Japanese, English, or Chinese)..."
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none transition-all shadow-sm bg-white"
                 />
@@ -347,6 +352,7 @@ function App() {
                  <textarea
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  onFocus={handleInputFocus}
                   placeholder="Enter a long sentence to analyze..."
                   rows={2}
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none transition-all shadow-sm resize-none bg-white"
