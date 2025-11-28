@@ -231,20 +231,25 @@ export class GeminiService {
 
       for (const part of response.candidates?.[0]?.content?.parts || []) {
         if (part.inlineData) {
-          return `data:image/png;base64,${part.inlineData.data}`;
+          const mimeType = part.inlineData.mimeType || 'image/png';
+          return `data:${mimeType};base64,${part.inlineData.data}`;
         }
       }
       // If we got a response but no image, it might be a safety filter or text response.
-      // We don't throw immediately, we just log and fall through to fallback.
       console.warn("gemini-2.5-flash-image returned no inlineData");
-    } catch (e) {
-      console.warn("gemini-2.5-flash-image failed, trying fallback:", e);
+    } catch (e: any) {
+      // Handle quota limit (429) specifically to avoid alarmist logs for free tier limits
+      if (e.message?.includes('429') || e.status === 429) {
+          console.warn("gemini-2.5-flash-image quota exceeded (429), skipping to fallback.");
+      } else {
+          console.warn("gemini-2.5-flash-image failed, trying fallback:", e);
+      }
     }
 
-    // 2. Fallback to Imagen 3 (often more reliable for pure image gen)
+    // 2. Fallback to Imagen 4 (Updated from 3.0 which is deprecated/not found)
     try {
       const response = await this.getClient().models.generateImages({
-        model: 'imagen-3.0-generate-001',
+        model: 'imagen-4.0-generate-001',
         prompt: `A clear, high-quality, photorealistic or artistic illustration representing the concept of: "${word}".`,
         config: {
           numberOfImages: 1,
@@ -257,7 +262,7 @@ export class GeminiService {
       if (base64Image) {
           return `data:image/jpeg;base64,${base64Image}`;
       }
-      console.warn("imagen-3.0-generate-001 returned no imageBytes");
+      console.warn("imagen-4.0-generate-001 returned no imageBytes");
     } catch (e) {
       console.warn("Imagen generation failed, trying search:", e);
     }
@@ -358,3 +363,4 @@ export class GeminiService {
 }
 
 export const geminiService = new GeminiService();
+    
