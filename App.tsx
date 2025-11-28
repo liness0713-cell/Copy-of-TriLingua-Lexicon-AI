@@ -20,6 +20,11 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const updateUrl = (term: string, currentMode: AppMode) => {
+    // Prevent execution in restricted environments (like blob previews) where pushState throws security errors
+    if (typeof window !== 'undefined' && (window.location.protocol === 'blob:' || window.location.protocol === 'file:')) {
+      return;
+    }
+
     try {
       const url = new URL(window.location.href);
       if (term) {
@@ -28,10 +33,9 @@ function App() {
         url.searchParams.delete('q');
       }
       url.searchParams.set('mode', currentMode);
-      window.history.pushState({}, '', url);
+      window.history.pushState({}, '', url.toString());
     } catch (e) {
-      // In some preview environments (like Project IDX or CodeSandbox using blob URLs),
-      // pushState might fail. We catch this to prevent the app from crashing.
+      // Catching the error prevents the app from crashing in environments that restrict History API
       console.warn("Could not update URL:", e);
     }
   };
@@ -49,19 +53,22 @@ function App() {
     }
 
     // 2. Check URL Params
-    const params = new URLSearchParams(window.location.search);
-    const urlQuery = params.get('q');
-    const urlMode = params.get('mode');
+    // We check for URL support before accessing specific params to be safe
+    if (typeof window !== 'undefined' && window.location.protocol !== 'blob:') {
+      const params = new URLSearchParams(window.location.search);
+      const urlQuery = params.get('q');
+      const urlMode = params.get('mode');
 
-    if (urlQuery) {
-      // If valid mode in URL, use it, otherwise default to dictionary
-      const targetMode: AppMode = (urlMode === 'sentence') ? 'sentence' : 'dictionary';
-      
-      setMode(targetMode);
-      setQuery(urlQuery);
-      
-      // Trigger search immediately with the URL parameters
-      handleSearch(undefined, urlQuery, targetMode);
+      if (urlQuery) {
+        // If valid mode in URL, use it, otherwise default to dictionary
+        const targetMode: AppMode = (urlMode === 'sentence') ? 'sentence' : 'dictionary';
+        
+        setMode(targetMode);
+        setQuery(urlQuery);
+        
+        // Trigger search immediately with the URL parameters
+        handleSearch(undefined, urlQuery, targetMode);
+      }
     }
   }, []);
 
