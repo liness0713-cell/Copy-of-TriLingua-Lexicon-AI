@@ -40,11 +40,21 @@ export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl, onWordClick 
       <div className="p-6 md:p-8 border-b border-slate-100 bg-gradient-to-b from-slate-50 to-white">
         <div className="flex flex-col gap-4">
           <div className="flex-1 text-center md:text-left">
-            <h1 className="text-4xl md:text-6xl font-serif text-slate-800 font-bold mb-6 flex flex-col md:flex-row items-center md:items-baseline gap-2 md:gap-6">
-              <span>{data.coreWord.jp}</span>
-              <span className="text-2xl md:text-4xl text-slate-400 font-light hidden md:inline">/</span>
-              <span className="text-3xl md:text-5xl text-slate-600 font-sans">{data.coreWord.en}</span>
-            </h1>
+            <div className="flex flex-wrap items-baseline gap-x-3 md:gap-x-6 gap-y-2 mb-6">
+              <h1 className="text-4xl md:text-6xl font-serif text-slate-800 font-bold leading-tight">
+                {data.coreWord.jp}
+              </h1>
+              
+              <div className="flex items-baseline gap-x-2 md:gap-x-4">
+                <span className="text-2xl md:text-4xl text-slate-300 font-light select-none">/</span>
+                <span className="text-3xl md:text-5xl text-slate-600 font-sans font-medium leading-tight">{data.coreWord.en}</span>
+              </div>
+
+              <div className="flex items-baseline gap-x-2 md:gap-x-4">
+                <span className="text-2xl md:text-4xl text-slate-300 font-light select-none">/</span>
+                <span className="text-3xl md:text-5xl text-slate-600 font-serif font-medium leading-tight">{data.coreWord.zh}</span>
+              </div>
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-slate-600 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
               <div className="flex items-center justify-center md:justify-start gap-3 p-2 rounded hover:bg-slate-50 transition-colors">
