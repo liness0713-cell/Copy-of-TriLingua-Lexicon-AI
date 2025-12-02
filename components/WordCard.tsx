@@ -46,7 +46,7 @@ export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl, onWordClick 
                 - Increased gap-y (line spacing)
                 - Grouped separators with words to prevent orphaned slashes
             */}
-            <div className="flex flex-wrap items-baseline gap-x-4 md:gap-x-6 gap-y-4 md:gap-y-6 mb-8">
+            <div className="flex flex-wrap justify-center items-baseline gap-x-4 md:gap-x-6 gap-y-4 md:gap-y-6 mb-8">
               <div className="text-4xl md:text-6xl font-serif text-slate-800 font-bold leading-tight">
                 {data.coreWord.jp}
               </div>
