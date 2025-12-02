@@ -40,17 +40,23 @@ export const WordCard: React.FC<WordCardProps> = ({ data, imageUrl, onWordClick 
       <div className="p-6 md:p-8 border-b border-slate-100 bg-gradient-to-b from-slate-50 to-white">
         <div className="flex flex-col gap-4">
           <div className="flex-1 text-center md:text-left">
-            <div className="flex flex-wrap items-baseline gap-x-3 md:gap-x-6 gap-y-2 mb-6">
-              <h1 className="text-4xl md:text-6xl font-serif text-slate-800 font-bold leading-tight">
+            {/* 
+                Refactored Header: 
+                - Uses div instead of h1 for flexible wrapping
+                - Increased gap-y (line spacing)
+                - Grouped separators with words to prevent orphaned slashes
+            */}
+            <div className="flex flex-wrap items-baseline gap-x-4 md:gap-x-6 gap-y-4 md:gap-y-6 mb-8">
+              <div className="text-4xl md:text-6xl font-serif text-slate-800 font-bold leading-tight">
                 {data.coreWord.jp}
-              </h1>
+              </div>
               
-              <div className="flex items-baseline gap-x-2 md:gap-x-4">
+              <div className="flex items-baseline gap-x-2 md:gap-x-4 whitespace-nowrap">
                 <span className="text-2xl md:text-4xl text-slate-300 font-light select-none">/</span>
                 <span className="text-3xl md:text-5xl text-slate-600 font-sans font-medium leading-tight">{data.coreWord.en}</span>
               </div>
 
-              <div className="flex items-baseline gap-x-2 md:gap-x-4">
+              <div className="flex items-baseline gap-x-2 md:gap-x-4 whitespace-nowrap">
                 <span className="text-2xl md:text-4xl text-slate-300 font-light select-none">/</span>
                 <span className="text-3xl md:text-5xl text-slate-600 font-serif font-medium leading-tight">{data.coreWord.zh}</span>
               </div>
